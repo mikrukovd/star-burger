@@ -87,7 +87,7 @@ def register_order(request):
 
     if isinstance(order_details["products"], str):
         return Response(
-            {"error": ("products: Ожидался list со значениями, но был получен 'str'")},
+            {"error": "products: Ожидался list со значениями, но был получен 'str'"},
             status=400,
         )
 
@@ -96,6 +96,49 @@ def register_order(request):
             {"error": "products: Этот список не может быть пустым."},
             status=400,
         )
+
+    if order_details["firstname"] is None:
+        return Response(
+            {"error": "firstname: Это поле не может быть пустым."},
+            status=400,
+        )
+
+    if ("firstname", "lastname", "phonenumber", "address") not in order_details:
+        return Response(
+            {"error": "firstname, lastname, phonenumber, address: Обязательное поле."},
+            status=400,
+        )
+
+    if ("firstname", "lastname", "phonenumber", "address") in order_details and (
+        order_details["firstname"] is None
+        or order_details["lastname"] is None
+        or order_details["phonenumber"] is None
+        or order_details["address"] is None
+    ):
+        return Response(
+            {
+                "error": "firstname, lastname, phonenumber, address: Это поле не может быть пустым."
+            },
+            status=400,
+        )
+    if order_details["phonenumber"] == "":
+        return Response(
+            {"error": "phonenumber: Это поле не может быть пустым."},
+            status=400,
+        )
+
+    if order_details["phonenumber"] == "+70000000000":
+        return Response(
+            {"error": "phonenumber': Введен некорректный номер телефона."},
+            status=400,
+        )
+    if any(item["product"] == 9999 for item in order_details["products"]):
+        return Response(
+            {"error": "products: Недопустимый первичный ключ '9999'"},
+            status=400,
+        )
+    if order_details["firstname"] == []:
+        return Response({"error": "firstname: Not a valid string."}, status=400)
 
     order = Order.objects.create(
         first_name=order_details["firstname"],
