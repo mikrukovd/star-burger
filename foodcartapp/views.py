@@ -73,6 +73,30 @@ def product_list_api(request):
 def register_order(request):
     order_details = request.data
 
+    if "products" not in order_details:
+        return Response(
+            {"error": "products: Обязательное поле."},
+            status=400,
+        )
+
+    if order_details["products"] is None:
+        return Response(
+            {"error": "products: Это поле не может быть пустым."},
+            status=400,
+        )
+
+    if isinstance(order_details["products"], str):
+        return Response(
+            {"error": ("products: Ожидался list со значениями, но был получен 'str'")},
+            status=400,
+        )
+
+    if order_details["products"] == []:
+        return Response(
+            {"error": "products: Этот список не может быть пустым."},
+            status=400,
+        )
+
     order = Order.objects.create(
         first_name=order_details["firstname"],
         last_name=order_details["lastname"],
