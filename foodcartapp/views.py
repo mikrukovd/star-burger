@@ -191,4 +191,12 @@ def register_order(request):
     #     )
 
     # TODO это лишь заглушка
-    return Response({})
+    return Response(
+        {
+            "id": order.id,
+            "firstname": order.firstname,
+            "lastname": order.lastname,
+            "phonenumber": str(order.phonenumber),
+            "address": order.address,
+        }
+    )
