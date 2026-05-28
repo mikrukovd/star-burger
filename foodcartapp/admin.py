@@ -123,17 +123,17 @@ class OrderItemInline(admin.TabularInline):
 class OrderAdmin(admin.ModelAdmin):
     list_display = [
         "id",
-        "first_name",
-        "last_name",
-        "phone_number",
+        "firstname",
+        "lastname",
+        "phonenumber",
         "address",
         "created_at",
     ]
 
     search_fields = [
-        "first_name",
-        "last_name",
-        "phone_number",
+        "firstname",
+        "lastname",
+        "phonenumber",
     ]
 
     readonly_fields = [
