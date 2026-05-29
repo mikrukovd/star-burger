@@ -6,9 +6,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 class OrderQuerySet(models.QuerySet):
     def with_price(self):
-        return self.annotate(
-            price=Sum(F("items__quantity") * F("items__product__price"))
-        )
+        return self.annotate(price=Sum(F("items__quantity") * F("items__price")))
 
 
 class Restaurant(models.Model):
@@ -157,6 +155,13 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField(
         "количество",
         validators=[MinValueValidator(1)],
+    )
+
+    price = models.DecimalField(
+        "цена",
+        max_digits=8,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
     )
 
     class Meta:
