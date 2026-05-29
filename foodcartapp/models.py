@@ -1,6 +1,14 @@
 from django.db import models
+from django.db.models import F, Sum
 from django.core.validators import MinValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
+
+
+class OrderQuerySet(models.QuerySet):
+    def with_price(self):
+        return self.annotate(
+            price=Sum(F("items__quantity") * F("items__product__price"))
+        )
 
 
 class Restaurant(models.Model):
@@ -119,6 +127,8 @@ class Order(models.Model):
     created_at = models.DateTimeField(
         auto_now_add=True,
     )
+
+    objects = OrderQuerySet.as_manager()
 
     class Meta:
         verbose_name = "заказ"
