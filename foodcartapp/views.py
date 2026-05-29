@@ -101,11 +101,13 @@ def register_order(request):
         lastname=serializer.validated_data["lastname"],
         phonenumber=serializer.validated_data["phonenumber"],
         address=serializer.validated_data["address"],
-        price=product.price,
     )
     for item in serializer.validated_data["products"]:
         OrderItem.objects.create(
-            order=order, product=item["product"], quantity=item["quantity"]
+            order=order,
+            product=item["product"],
+            quantity=item["quantity"],
+            price=item["product"].price,
         )
     return Response(
         {
