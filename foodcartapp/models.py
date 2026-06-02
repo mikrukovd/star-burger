@@ -134,15 +134,23 @@ class Order(models.Model):
     )
     comment = models.TextField("комментарий к заказу", blank=True)
     created_at = models.DateTimeField(
+        "создан",
         auto_now_add=True,
     )
+    called_at = models.DateTimeField("дата звонка", blank=True, null=True)
+    delivered_at = models.DateTimeField("доставлен", blank=True, null=True)
 
     objects = OrderQuerySet.as_manager()
 
     class Meta:
         verbose_name = "заказ"
         verbose_name_plural = "заказы"
-        indexes = [models.Index(fields=["created_at"]), models.Index(fields=["status"])]
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["called_at"]),
+            models.Index(fields=["delivered_at"]),
+        ]
 
     def __str__(self):
         return f"Заказ #{self.id}"
