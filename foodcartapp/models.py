@@ -132,7 +132,7 @@ class Order(models.Model):
         "адрес доставки",
         max_length=255,
     )
-
+    comment = models.TextField("комментарий к заказу", blank=True)
     created_at = models.DateTimeField(
         auto_now_add=True,
     )
