@@ -109,6 +109,17 @@ class RestaurantMenuItem(models.Model):
 
 
 class Order(models.Model):
+    class Status(models.TextChoices):
+        NEW = "new", "Новый"
+        COOKING = "cooking", "Готовится"
+        CANCELED = "canceled", "Отменён"
+        PREPARING = "preparing", "В сборке"
+        DELIVERING = "delivering", "В доставке"
+        DELIVERED = "delivered", "Доставлен"
+
+    status = models.CharField(
+        "статус заказа", max_length=50, choices=Status.choices, default=Status.NEW
+    )
     firstname = models.CharField("имя", max_length=50)
     lastname = models.CharField("фамилия", max_length=50)
 
@@ -131,7 +142,7 @@ class Order(models.Model):
     class Meta:
         verbose_name = "заказ"
         verbose_name_plural = "заказы"
-        indexes = [models.Index(fields=["created_at"])]
+        indexes = [models.Index(fields=["created_at"]), models.Index(fields=["status"])]
 
     def __str__(self):
         return f"Заказ #{self.id}"

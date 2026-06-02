@@ -132,6 +132,7 @@ class OrderItemInline(admin.TabularInline):
 class OrderAdmin(admin.ModelAdmin):
     list_display = [
         "id",
+        "status",
         "firstname",
         "lastname",
         "phonenumber",
