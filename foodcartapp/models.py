@@ -109,16 +109,29 @@ class RestaurantMenuItem(models.Model):
 
 
 class Order(models.Model):
-    class Status(models.TextChoices):
-        NEW = "new", "Новый"
+    class OrderStatus(models.TextChoices):
+        NEW = "new", "Необработанный"
         COOKING = "cooking", "Готовится"
         CANCELED = "canceled", "Отменён"
         PREPARING = "preparing", "В сборке"
         DELIVERING = "delivering", "В доставке"
         DELIVERED = "delivered", "Доставлен"
 
-    status = models.CharField(
-        "статус заказа", max_length=50, choices=Status.choices, default=Status.NEW
+    class PaymentStatus(models.TextChoices):
+        CARD = "card", "Карта"
+        MONEY = "money", "Наличные"
+
+    order_status = models.CharField(
+        "статус заказа",
+        max_length=50,
+        choices=OrderStatus.choices,
+        default=OrderStatus.NEW,
+    )
+    payment_status = models.CharField(
+        "способ оплаты",
+        max_length=50,
+        choices=PaymentStatus,
+        default=PaymentStatus.MONEY,
     )
     firstname = models.CharField("имя", max_length=50)
     lastname = models.CharField("фамилия", max_length=50)
@@ -147,7 +160,8 @@ class Order(models.Model):
         verbose_name_plural = "заказы"
         indexes = [
             models.Index(fields=["created_at"]),
-            models.Index(fields=["status"]),
+            models.Index(fields=["order_status"]),
+            models.Index(fields=["payment_status"]),
             models.Index(fields=["called_at"]),
             models.Index(fields=["delivered_at"]),
         ]
