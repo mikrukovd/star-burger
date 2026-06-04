@@ -1,12 +1,22 @@
-from django.db import models
-from django.db.models import F, Sum
 from django.core.validators import MinValueValidator
+from django.db import models
+from django.db.models import DecimalField, F, Prefetch, Sum
 from phonenumber_field.modelfields import PhoneNumberField
 
 
 class OrderQuerySet(models.QuerySet):
     def with_price(self):
-        return self.annotate(price=Sum(F("items__quantity") * F("items__price")))
+        return self.annotate(
+            price=Sum(
+                F("items__quantity") * F("items__price"),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            )
+        )
+
+    def with_items_prefetched(self):
+        return self.prefetch_related(
+            Prefetch("items", queryset=OrderItem.objects.select_related("product"))
+        )
 
 
 class Restaurant(models.Model):
@@ -144,6 +154,14 @@ class Order(models.Model):
     address = models.CharField(
         "адрес доставки",
         max_length=255,
+    )
+    restaurant = models.ForeignKey(
+        Restaurant,
+        related_name="order",
+        verbose_name="ресторан",
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
     )
     comment = models.TextField("комментарий к заказу", blank=True)
     created_at = models.DateTimeField(

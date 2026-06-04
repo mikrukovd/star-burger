@@ -20,20 +20,39 @@
         <th>Телефон</th>
         <th>Адрес доставки</th>
         <th>Комментарий</th>
+        <th>Рестораны</th>
         <th>Ссылка на админку</th>
       </tr>
       {% for item in order_items %}
         <tr>
-          <td>{{ item.id }}</td>
-          <td>{{ item.get_order_status_display }}</td>
-          <td>{{ item.get_payment_status_display }}</td>
-          <td>{{ item.price }} руб</td>
-          <td>{{ item.firstname }} {{ item.lastname }}</td>
-          <td>{{ item.phonenumber }}</td>
-          <td>{{ item.address }}</td>
-          <td>{{ item.comment }}</td>
+          <td>{{ item.order.id }}</td>
+          <td>{{ item.order.get_order_status_display }}</td>
+          <td>{{ item.order.get_payment_status_display }}</td>
+          <td>{{ item.order.price }} руб</td>
+          <td>{{ item.order.firstname }} {{ item.order.lastname }}</td>
+          <td>{{ item.order.phonenumber }}</td>
+          <td>{{ item.order.address }}</td>
+          <td>{{ item.order.comment }}</td>
           <td>
-            <a href="{% url 'admin:foodcartapp_order_change' item.id %}?next={{ request.path|urlencode }}">Редактировать</a>
+            {% if item.order.restaurant %}
+              Готовит {{ item.order.restaurant.name }}
+            {% else %}
+              {% with available=item.available_restaurants %}
+                {% if available %}
+                  <details>
+                    <summary>Может быть приготовлен ресторанами ({{ available|length }})</summary>
+                    <ul>
+                      {% for restaurant in available %}<li>{{ restaurant.name }}</li>{% endfor %}
+                    </ul>
+                  </details>
+                {% else %}
+                  Ошибка определения координат
+                {% endif %}
+              {% endwith %}
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'admin:foodcartapp_order_change' item.order.id %}?next={{ request.path|urlencode }}">Редактировать</a>
           </td>
         </tr>
       {% endfor %}

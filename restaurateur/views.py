@@ -1,12 +1,15 @@
+from collections import defaultdict
+
 from django import forms
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import user_passes_test
+from django.db.models import Case, IntegerField, Value, When
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
 
-from foodcartapp.models import Order, Product, Restaurant
+from foodcartapp.models import Order, Product, Restaurant, RestaurantMenuItem
 
 
 class Login(forms.Form):
@@ -104,11 +107,63 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url="restaurateur:login")
 def view_orders(request):
+    orders = (
+        Order.objects.with_price()
+        .with_items_prefetched()
+        .order_by(
+            Case(
+                When(order_status=Order.OrderStatus.NEW, then=Value(1)),
+                When(order_status=Order.OrderStatus.COOKING, then=Value(2)),
+                default=Value(3),
+                output_field=IntegerField(),
+            )
+        )
+    )
+
+    all_product_ids = set()
+    for order in orders:
+        for item in order.items.all():
+            all_product_ids.add(item.product_id)
+
+    # все рестораны для продукта
+    product_restaurants = defaultdict(set)
+    if all_product_ids:
+        menu_items = RestaurantMenuItem.objects.filter(
+            product_id__in=all_product_ids, availability=True
+        ).values_list("product_id", "restaurant_id")
+        for product_id, restaurant_id in menu_items:
+            product_restaurants[product_id].add(restaurant_id)
+
+    restaurant_cache = {rest.id: rest for rest in Restaurant.objects.all()}
+
+    orders_with_availability = []
+    for order in orders:
+        product_ids = [item.product_id for item in order.items.all()]
+        if not product_ids:
+            available_restaurant_ids = []
+        else:
+            available_restaurant_ids = set(
+                product_restaurants.get(product_ids[0], set())
+            )
+            for pid in product_ids[1:]:
+                available_restaurant_ids &= product_restaurants.get(pid, set())
+                if not available_restaurant_ids:
+                    break
+
+        # из id в объекты Restaurant
+        available_restaurants = [
+            restaurant_cache[rid]
+            for rid in available_restaurant_ids
+            if rid in restaurant_cache
+        ]
+
+        orders_with_availability.append(
+            {
+                "order": order,
+                "available_restaurants": available_restaurants,
+            }
+        )
 
     return render(
-        request,
-        template_name="order_items.html",
-        context={
-            "order_items": Order.objects.with_price(),
-        },
+        request, "order_items.html", context={"order_items": orders_with_availability}
     )

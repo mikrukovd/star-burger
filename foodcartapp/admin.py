@@ -169,3 +169,8 @@ class OrderAdmin(admin.ModelAdmin):
             return redirect(next_url)
 
         return super().response_change(request, obj)
+
+    def save_model(self, request, obj, form, change):
+        if obj.restaurant and obj.order_status != Order.OrderStatus.COOKING:
+            obj.order_status = Order.OrderStatus.COOKING
+        super().save_model(request, obj, form, change)
