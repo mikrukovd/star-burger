@@ -37,18 +37,18 @@
             {% if item.order.restaurant %}
               Готовит {{ item.order.restaurant.name }}
             {% else %}
-              {% with available=item.available_restaurants %}
-                {% if available %}
-                  <details>
-                    <summary>Может быть приготовлен ресторанами ({{ available|length }})</summary>
-                    <ul>
-                      {% for restaurant in available %}<li>{{ restaurant.name }}</li>{% endfor %}
-                    </ul>
-                  </details>
-                {% else %}
-                  Ошибка определения координат
-                {% endif %}
-              {% endwith %}
+              {% if item.available_restaurants %}
+                <details>
+                  <summary>Может быть приготовлен ресторанами ({{ item.available_restaurants|length }})</summary>
+                  <ul>
+                    {% for r in item.available_restaurants %}
+                      <li>{{ r.restaurant.name }} — {{ r.distance|floatformat:2 }} км</li>
+                    {% endfor %}
+                  </ul>
+                </details>
+              {% else %}
+                Нет доступных ресторанов
+              {% endif %}
             {% endif %}
           </td>
           <td>

@@ -1,6 +1,8 @@
 from collections import defaultdict
 
+import requests
 from django import forms
+from django.conf import settings
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import user_passes_test
@@ -8,6 +10,7 @@ from django.db.models import Case, IntegerField, Value, When
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
+from geopy.distance import distance
 
 from foodcartapp.models import Order, Product, Restaurant, RestaurantMenuItem
 
@@ -105,6 +108,50 @@ def view_restaurants(request):
     )
 
 
+def fetch_coordinates(apikey, address):
+    base_url = "https://geocode-maps.yandex.ru/1.x"
+    response = requests.get(
+        base_url,
+        params={
+            "geocode": address,
+            "apikey": apikey,
+            "format": "json",
+        },
+    )
+    response.raise_for_status()
+    found_places = response.json()["response"]["GeoObjectCollection"]["featureMember"]
+
+    if not found_places:
+        return None
+
+    most_relevant = found_places[0]
+    lon, lat = most_relevant["GeoObject"]["Point"]["pos"].split(" ")
+    return lon, lat
+
+
+def enrich_restaurants(order_coords, available_restaurants):
+    result = []
+
+    for restaurant in available_restaurants:
+        try:
+            lon, lat = fetch_coordinates(
+                apikey=settings.YANDEX_GEOCODER_APIKEY, address=restaurant.address
+            )
+            restaurant_coords = (float(lat), float(lon))
+            dist = distance(order_coords, restaurant_coords).km
+        except requests.exceptions.RequestException:
+            pass  # пропуск ресторана без дистанции если гео не доступен
+
+        result.append(
+            {
+                "restaurant": restaurant,
+                "distance": dist,
+            }
+        )
+
+    return sorted(result, key=lambda x: x["distance"])
+
+
 @user_passes_test(is_manager, login_url="restaurateur:login")
 def view_orders(request):
     orders = (
@@ -125,7 +172,6 @@ def view_orders(request):
         for item in order.items.all():
             all_product_ids.add(item.product_id)
 
-    # все рестораны для продукта
     product_restaurants = defaultdict(set)
     if all_product_ids:
         menu_items = RestaurantMenuItem.objects.filter(
@@ -138,29 +184,45 @@ def view_orders(request):
 
     orders_with_availability = []
     for order in orders:
+        try:
+            order_lon, order_lat = fetch_coordinates(address=order.address)
+            order_coords = (float(order_lat), float(order_lon))
+        except requests.exceptions.RequestException:
+            order_coords = None
+
         product_ids = [item.product_id for item in order.items.all()]
+
         if not product_ids:
-            available_restaurant_ids = []
+            available_restaurants = []
         else:
             available_restaurant_ids = set(
                 product_restaurants.get(product_ids[0], set())
             )
-            for pid in product_ids[1:]:
-                available_restaurant_ids &= product_restaurants.get(pid, set())
+            for product_id in product_ids[1:]:
+                available_restaurant_ids &= product_restaurants.get(product_id, set())
                 if not available_restaurant_ids:
                     break
 
-        # из id в объекты Restaurant
-        available_restaurants = [
-            restaurant_cache[rid]
-            for rid in available_restaurant_ids
-            if rid in restaurant_cache
-        ]
+            available_restaurants = [
+                restaurant_cache[rest_id]
+                for rest_id in available_restaurant_ids
+                if rest_id in restaurant_cache
+            ]
+
+        if order_coords is not None:
+            available_restaurant_with_distance = enrich_restaurants(
+                order_coords,
+                available_restaurants,
+            )
+        else:
+            available_restaurant_with_distance = [
+                {"restaurant": rest, "distance": None} for rest in available_restaurants
+            ]
 
         orders_with_availability.append(
             {
                 "order": order,
-                "available_restaurants": available_restaurants,
+                "available_restaurants": available_restaurant_with_distance,
             }
         )
 
