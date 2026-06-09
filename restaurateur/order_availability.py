@@ -84,7 +84,7 @@ def build_places_cache(orders, restaurants_by_id):
 
 
 def build_restaurants_by_id(orders, product_restaurants):
-    """Загружает рестораны для всех заказов"""
+    """Загружает рестораны для всех заказов в одном запросе"""
     all_available_restaurant_ids = set()
 
     for order in orders:
