@@ -148,6 +148,7 @@ class Order(models.Model):
     phonenumber = PhoneNumberField(
         "телефон",
         region="RU",
+        db_index=True,
     )
 
     address = models.CharField(
