@@ -9,7 +9,7 @@ from django.db.models import Case, IntegerField, Value, When
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
-from utils import enrich_restaurants, fetch_coordinates
+from places.utils import enrich_restaurants, fetch_coordinates
 
 from foodcartapp.models import Order, Product, Restaurant, RestaurantMenuItem
 
