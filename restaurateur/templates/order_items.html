@@ -34,21 +34,27 @@
           <td>{{ item.order.address }}</td>
           <td>{{ item.order.comment }}</td>
           <td>
-            {% if item.order.restaurant %}
+            {% if item.address_not_found %}
+              <span style="color: red; font-weight: bold;">
+                Адрес не найден
+              </span>
+            {% elif item.order.restaurant %}
               Готовит {{ item.order.restaurant.name }}
+            {% elif item.available_restaurants %}
+              <details>
+                <summary>
+                  Может быть приготовлен ресторанами ({{ item.available_restaurants|length }})
+                </summary>
+                <ul>
+                  {% for r in item.available_restaurants %}
+                    <li>
+                      {{ r.restaurant.name }} — {{ r.distance|floatformat:2 }} км
+                    </li>
+                  {% endfor %}
+                </ul>
+              </details>
             {% else %}
-              {% if item.available_restaurants %}
-                <details>
-                  <summary>Может быть приготовлен ресторанами ({{ item.available_restaurants|length }})</summary>
-                  <ul>
-                    {% for r in item.available_restaurants %}
-                      <li>{{ r.restaurant.name }} — {{ r.distance|floatformat:2 }} км</li>
-                    {% endfor %}
-                  </ul>
-                </details>
-              {% else %}
-                Нет доступных ресторанов
-              {% endif %}
+              Нет доступных ресторанов
             {% endif %}
           </td>
           <td>

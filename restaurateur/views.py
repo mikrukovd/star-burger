@@ -1,6 +1,3 @@
-from collections import defaultdict
-
-import requests
 from django import forms
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
@@ -9,9 +6,16 @@ from django.db.models import Case, IntegerField, Value, When
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
-from places.utils import enrich_restaurants, fetch_coordinates
 
-from foodcartapp.models import Order, Product, Restaurant, RestaurantMenuItem
+from foodcartapp.models import Order, Restaurant
+from places.utils import enrich_restaurants
+from restaurateur.order_availability import (
+    build_places_cache,
+    build_restaurants_by_id,
+    get_available_restaurants_for_order,
+    get_order_coords,
+    get_product_restaurants,
+)
 
 
 class Login(forms.Form):
@@ -109,9 +113,10 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url="restaurateur:login")
 def view_orders(request):
-    orders = (
+    orders = list(
         Order.objects.with_price()
         .with_items_prefetched()
+        .exclude(order_status=Order.OrderStatus.DELIVERED)
         .order_by(
             Case(
                 When(order_status=Order.OrderStatus.NEW, then=Value(1)),
@@ -122,65 +127,38 @@ def view_orders(request):
         )
     )
 
-    all_product_ids = set()
-    for order in orders:
-        for item in order.items.all():
-            all_product_ids.add(item.product_id)
-
-    product_restaurants = defaultdict(set)
-    if all_product_ids:
-        menu_items = RestaurantMenuItem.objects.filter(
-            product_id__in=all_product_ids, availability=True
-        ).values_list("product_id", "restaurant_id")
-        for product_id, restaurant_id in menu_items:
-            product_restaurants[product_id].add(restaurant_id)
-
-    restaurant_cache = {rest.id: rest for rest in Restaurant.objects.all()}
+    product_restaurants = get_product_restaurants(orders)
+    restaurants_by_id = build_restaurants_by_id(orders, product_restaurants)
+    places_cache = build_places_cache(orders, restaurants_by_id)
 
     orders_with_availability = []
     for order in orders:
-        try:
-            order_lon, order_lat = fetch_coordinates(address=order.address)
-            order_coords = (float(order_lat), float(order_lon))
-        except requests.exceptions.RequestException:
-            order_coords = None
+        order_coords, address_not_found = get_order_coords(order, places_cache)
 
-        product_ids = [item.product_id for item in order.items.all()]
+        available_restaurants = get_available_restaurants_for_order(
+            order, product_restaurants, restaurants_by_id
+        )
 
-        if not product_ids:
-            available_restaurants = []
-        else:
-            available_restaurant_ids = set(
-                product_restaurants.get(product_ids[0], set())
-            )
-            for product_id in product_ids[1:]:
-                available_restaurant_ids &= product_restaurants.get(product_id, set())
-                if not available_restaurant_ids:
-                    break
-
-            available_restaurants = [
-                restaurant_cache[rest_id]
-                for rest_id in available_restaurant_ids
-                if rest_id in restaurant_cache
-            ]
-
-        if order_coords is not None:
+        if order_coords:
             available_restaurant_with_distance = enrich_restaurants(
-                order_coords,
-                available_restaurants,
+                order_coords, available_restaurants, places_cache
             )
         else:
             available_restaurant_with_distance = [
-                {"restaurant": rest, "distance": None} for rest in available_restaurants
+                {"restaurant": restaurant, "distance": None}
+                for restaurant in available_restaurants
             ]
 
         orders_with_availability.append(
             {
                 "order": order,
                 "available_restaurants": available_restaurant_with_distance,
+                "address_not_found": address_not_found,
             }
         )
 
     return render(
-        request, "order_items.html", context={"order_items": orders_with_availability}
+        request,
+        "order_items.html",
+        {"order_items": orders_with_availability},
     )

@@ -1,6 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import DecimalField, F, Prefetch, Sum
+from django.db.models import DecimalField, F, Sum
 from phonenumber_field.modelfields import PhoneNumberField
 
 
@@ -14,9 +14,7 @@ class OrderQuerySet(models.QuerySet):
         )
 
     def with_items_prefetched(self):
-        return self.prefetch_related(
-            Prefetch("items", queryset=OrderItem.objects.select_related("product"))
-        )
+        return self.select_related("restaurant").prefetch_related("items")
 
 
 class Restaurant(models.Model):
