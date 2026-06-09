@@ -141,7 +141,6 @@ class Order(models.Model):
         "способ оплаты",
         max_length=50,
         choices=PaymentStatus,
-        default=PaymentStatus.MONEY,
     )
     firstname = models.CharField("имя", max_length=50)
     lastname = models.CharField("фамилия", max_length=50)
