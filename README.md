@@ -137,18 +137,92 @@ Parcel будет следить за файлами в каталоге `bundle
 
 ## Как запустить prod-версию сайта
 
-Собрать фронтенд:
+### Настройка сервера
+
+Сервер использует следующую конфигурацию:
+
+- Gunicorn для запуска Django приложения
+- Nginx в качестве reverse proxy
+- systemd для управления процессом
+- Порт 8080 для внутреннего Gunicorn сервиса
+- Статические и медиа файлы размещены по путям:
+  - `/opt/star-burger/staticfiles/`
+  - `/opt/star-burger/media/`
+
+### Настройка приложения
+
+1. Создайте файл `.env` в каталоге `star_burger/` со следующими настройками:
+   - `DEBUG` — дебаг-режим. В production установите `False`.
+   - `SECRET_KEY` — секретный ключ проекта. Он отвечает за шифрование на сайте.
+   - `ALLOWED_HOSTS` — [см. документацию Django](https://docs.djangoproject.com/en/5.2/ref/settings/#allowed-hosts)
+   - `YANDEX_GEOCODER_APIKEY` - [Api Геокодера](https://developer.tech.yandex.ru/services)
+   - `DATABASE_URL` — URL подключения к базе данных (например, postgresql://user:password@localhost/dbname)
+   - `ROLLBAR_ACCESS_TOKEN` — токен для Rollbar мониторинга ошибок (если используется)
+   - `ROLLBAR_ENVIRONMENT` — окружение для Rollbar (например, 'production' или 'development')
+
+2. Соберите фронтенд:
 
 ```sh
 ./node_modules/.bin/parcel build bundles-src/index.js --dist-dir bundles --public-url="./"
 ```
 
-Настроить бэкенд: создать файл `.env` в каталоге `star_burger/` со следующими настройками:
+3. Настройте статические файлы в Django:
+   - Убедитесь, что `STATIC_ROOT` указывает на `/opt/star-burger/staticfiles/`
+   - Убедитесь, что `MEDIA_ROOT` указывает на `/opt/star-burger/media/`
 
-- `DEBUG` — дебаг-режим. Поставьте `False`.
-- `SECRET_KEY` — секретный ключ проекта. Он отвечает за шифрование на сайте. Например, им зашифрованы все пароли на вашем сайте.
-- `ALLOWED_HOSTS` — [см. документацию Django](https://docs.djangoproject.com/en/5.2/ref/settings/#allowed-hosts)
-- `YANDEX_GEOCODER_APIKEY` - [Api Геокодера](https://developer.tech.yandex.ru/services)
+4. Создайте и активируйте виртуальное окружение:
+```sh
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+5. Настройте systemd сервис (см. `/etc/systemd/system/star-burger.service`):
+```ini
+[Unit]
+Description=star-burger webapp
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/star-burger
+EnvironmentFile=/opt/star-burger/.env
+ExecStart=/opt/star-burger/.venv/bin/gunicorn --bind 127.0.0.1:8080 star_burger.wsgi:application
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+6. Настройте Nginx (см. конфигурационный файл сервера):
+```nginx
+server {
+    listen 80;
+    server_name ip сервера;
+
+    location / {
+        include /etc/nginx/proxy_params;
+        proxy_pass http://127.0.0.1:8080;
+    }
+    location /media/ {
+        alias /opt/star-burger/media/;
+    }
+    location /static/ {
+        alias /opt/star-burger/staticfiles/;
+    }
+}
+```
+
+7. Запустите сервис:
+```sh
+sudo systemctl start star-burger
+sudo systemctl enable star-burger
+```
+
+8. Убедитесь, что Nginx работает:
+```sh
+sudo systemctl restart nginx
+```
 
 ## Цели проекта
 
