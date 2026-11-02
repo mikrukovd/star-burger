@@ -1,9 +1,7 @@
 import os
 
 import dj_database_url
-
 from environs import Env
-
 
 env = Env()
 env.read_env()
@@ -16,6 +14,8 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", True)
 YANDEX_GEOCODER_APIKEY = env("YANDEX_GEOCODER_APIKEY")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", ["127.0.0.1", "localhost"])
+ROLLBAR_ACCESS_TOKEN = os.getenv("ROLLBAR_ACCESS_TOKEN")
+ROLLBAR_ENVIRONMENT = os.getenv("ROLLBAR_ENVIRONMENT", "development")
 
 INSTALLED_APPS = [
     "foodcartapp.apps.FoodcartappConfig",
@@ -41,7 +41,17 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
+    "rollbar.contrib.django.middleware.RollbarNotifierMiddleware",
 ]
+
+
+ROLLBAR = {
+    "access_token": os.getenv("ROLLBAR_ACCESS_TOKEN"),
+    "environment": os.getenv("ROLLBAR_ENVIRONMENT", "development"),
+    "code_version": os.getenv("GIT_SHA", "1.0.0"),
+    "root": BASE_DIR,
+}
+
 
 ROOT_URLCONF = "star_burger.urls"
 
