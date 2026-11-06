@@ -241,7 +241,7 @@ chmod +x deploy.sh
 ```
 Запустить скрипт в папке приложения
 ```bash
-deploy.sh
+./deploy.sh
 ```
 
 
