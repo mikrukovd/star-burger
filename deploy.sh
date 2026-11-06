@@ -30,4 +30,11 @@ systemctl restart star-burger.service
 echo "Обновление конфигурации nginx"
 systemctl reload nginx.service
 
+echo "Уведомления о деплое для Rollbar"
+curl https://api.rollbar.com/api/1/deploy/ \
+    -F access_token="$ROLLBAR_ACCESS_TOKEN" \
+    -F environment="production" \
+    -F revision="$(git rev-parse --verify HEAD)" \
+    -F local_username"root"
+
 echo "Обновление проекта завершено"
