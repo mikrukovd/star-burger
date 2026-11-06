@@ -235,10 +235,6 @@ sudo systemctl restart nginx
 - Пересоберет конфигурацию nginx
 
 ### Как запустить
-Сделать скрипт исполняемым
-```bash
-chmod +x deploy.sh
-```
 Запустить скрипт в папке приложения
 ```bash
 ./deploy.sh
